@@ -15,6 +15,7 @@ import {
   STATUSES,
 } from "../../../shared/utils/tickets.js";
 import { useAuth } from "../../../app/providers/auth-context.js";
+import { useResponsive } from "../../../shared/hooks/use-responsive.js";
 import { useTicketDetail, useTeams, useUsers } from "../../../services/tickets/hooks/use-tickets.js";
 import {
   useAddComment,
@@ -69,6 +70,7 @@ function isBlockingActivity(value) {
 
 export default function TicketDetail({ ticketId, canChangeStatus, canComment, onUpdate, knownUsers = [] }) {
   const { currentUser } = useAuth();
+  const { isMobile } = useResponsive();
   const { data: ticket } = useTicketDetail(ticketId);
   const { data: users = [] } = useUsers();
   const { data: teams = [] } = useTeams();
@@ -263,7 +265,7 @@ export default function TicketDetail({ ticketId, canChangeStatus, canComment, on
             IMPIDE TRABAJAR
           </span>
         )}
-        <span style={{ fontFamily: "monospace", fontSize: 12, color: T.textMuted, marginLeft: "auto" }}>
+        <span style={{ fontFamily: "monospace", fontSize: 12, color: T.textMuted, marginLeft: isMobile ? 0 : "auto", width: isMobile ? "100%" : "auto" }}>
           {getTicketDisplayId(displayTicket)}
         </span>
       </div>
@@ -273,20 +275,20 @@ export default function TicketDetail({ ticketId, canChangeStatus, canComment, on
           background: "linear-gradient(180deg, #ffffff 0%, #f8fbff 100%)",
           borderRadius: 14,
           overflow: "hidden",
-          padding: 20,
+          padding: isMobile ? 16 : 20,
           marginBottom: 20,
           border: `1px solid ${T.border}`,
           boxShadow: "0 12px 28px rgba(30,91,181,0.08)",
         }}
       >
-        <h2 style={{ margin: "0 0 10px", color: T.textPrimary, fontSize: 22, lineHeight: 1.2, fontWeight: 800 }}>
+        <h2 style={{ margin: "0 0 10px", color: T.textPrimary, fontSize: isMobile ? 18 : 22, lineHeight: 1.2, fontWeight: 800, wordBreak: "break-word" }}>
           {displayTicket.title}
         </h2>
         <p style={{ margin: "0 0 14px", color: T.textSecondary, fontSize: 13, lineHeight: 1.7 }}>
           {displayTicket.description}
         </p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
           {[
             ["Categoría", displayTicket.category],
             ["Actividad", isBlockingActivity(displayTicket.activity) ? "Impide trabajar" : "No impide trabajar"],
@@ -341,7 +343,7 @@ export default function TicketDetail({ ticketId, canChangeStatus, canComment, on
                   style={{
                     background: T.accentSoft,
                     border: `1px solid ${T.borderStrong}`,
-                    borderRadius: 999,
+                    borderRadius: isMobile ? 14 : 999,
                     padding: "6px 10px",
                     fontSize: 11,
                     color: T.accent,
@@ -350,10 +352,13 @@ export default function TicketDetail({ ticketId, canChangeStatus, canComment, on
                     gap: 6,
                     fontWeight: 600,
                     cursor: "pointer",
+                    width: isMobile ? "100%" : "auto",
+                    justifyContent: isMobile ? "space-between" : "flex-start",
+                    flexWrap: "wrap",
                   }}
                 >
                   <Paperclip size={10} />
-                  {attachment.name}
+                  <span style={{ wordBreak: "break-word", flex: 1 }}>{attachment.name}</span>
                   <span style={{ color: T.textSecondary }}>({(attachment.size / 1024 / 1024).toFixed(2)} MB)</span>
                   <Download size={11} />
                 </button>
@@ -465,7 +470,7 @@ export default function TicketDetail({ ticketId, canChangeStatus, canComment, on
       )}
 
       {canChangeStatus && currentUser.role === "support" && (
-        <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+        <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 12, marginBottom: 20 }}>
           {!showStatusEditor && !showPriorityEditor ? (
             <>
               <Button variant="secondary" size="sm" style={editorSecondaryButtonStyle} onClick={() => setShowStatusEditor(true)}>
@@ -500,7 +505,7 @@ export default function TicketDetail({ ticketId, canChangeStatus, canComment, on
                 focusBorderColor={T.accent}
                 blurBorderColor={T.borderStrong}
               />
-              <div style={{ display: "flex", gap: 8 }}>
+              <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 8 }}>
                 <Button size="sm" disabled={!newStatus || !statusNote.trim() || statusMutation.isPending} onClick={handleStatusChange}>
                   <Check size={13} /> Confirmar
                 </Button>
@@ -524,7 +529,7 @@ export default function TicketDetail({ ticketId, canChangeStatus, canComment, on
                 focusBorderColor={T.accent}
                 blurBorderColor={T.borderStrong}
               />
-              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+              <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 8, marginTop: 12 }}>
                 <Button size="sm" disabled={!newPriority || priorityMutation.isPending} onClick={handlePriorityChange}>
                   <Check size={13} /> Confirmar
                 </Button>
@@ -654,7 +659,7 @@ export default function TicketDetail({ ticketId, canChangeStatus, canComment, on
         })}
 
         {canComment && (
-          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 8, marginTop: 12 }}>
             <input
               value={comment}
               onChange={(event) => setComment(event.target.value)}
@@ -678,7 +683,7 @@ export default function TicketDetail({ ticketId, canChangeStatus, canComment, on
                 event.target.style.borderColor = T.border;
               }}
             />
-            <Button onClick={handleComment} disabled={commentMutation.isPending} style={{ padding: "10px 14px", minWidth: 110 }}>
+            <Button onClick={handleComment} disabled={commentMutation.isPending} style={{ padding: "10px 14px", minWidth: 110, width: isMobile ? "100%" : "auto" }}>
               {commentMutation.isPending ? "Enviando..." : <Send size={15} />}
             </Button>
           </div>

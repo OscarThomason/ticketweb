@@ -28,6 +28,7 @@ import { inventoryApi } from "../../../../services/inventory/inventory.api.js";
 import { logAuditEntry } from "../../../../services/audit/audit.api.js";
 import { isBackendEnabled } from "../../../../services/api/http-client.js";
 import BrandMark from "../../../../shared/components/BrandMark.jsx";
+import NotificationsBell from "../../../../shared/components/NotificationsBell.jsx";
 
 function hashPassword(password) {
   let h = 0;
@@ -360,6 +361,18 @@ export default function SupportDashboard() {
   const [teamSearch, setTeamSearch]           = useState("");
   const userImportInputRef                     = useRef(null);
 
+  useEffect(() => {
+    const handleOpenTicket = (event) => {
+      const ticketId = event.detail?.ticketId;
+      if (!ticketId) return;
+      setView("tickets");
+      setSelectedId(ticketId);
+    };
+
+    window.addEventListener("ticketweb:open-ticket", handleOpenTicket);
+    return () => window.removeEventListener("ticketweb:open-ticket", handleOpenTicket);
+  }, []);
+
   const handleExportUsersExcel = async () => {
     const inventoryRows = await inventoryApi.getAll().catch(() => []);
     const rows = filteredUsers.map((user) => {
@@ -538,7 +551,7 @@ export default function SupportDashboard() {
     <div style={{ background: T.bgPage, minHeight: "100vh", fontFamily: "'DM Sans', sans-serif", padding: isMobile ? 12 : 20 }}>
 
       {/* ── Page Header ──────────────────────────────── */}
-      <div style={{ background: T.bgHeader, borderRadius: 16, padding: isMobile ? "18px 16px" : "26px 32px", marginBottom: 28, color: T.white, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16, boxShadow: "0 4px 24px rgba(30,91,181,0.25)", position: "relative", overflow: "hidden" }}>
+      <div style={{ background: T.bgHeader, borderRadius: 16, padding: isMobile ? "18px 16px" : "26px 32px", marginBottom: 28, color: T.white, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16, boxShadow: "0 4px 24px rgba(30,91,181,0.25)", position: "relative", overflow: "visible" }}>
         <div style={{ position: "absolute", right: -30, top: -30, width: 180, height: 180, borderRadius: "50%", background: "rgba(255,255,255,0.05)" }} />
         <div style={{ position: "absolute", right: 100, bottom: -50, width: 130, height: 130, borderRadius: "50%", background: "rgba(255,255,255,0.04)" }} />
         <div style={{ position: "relative", zIndex: 1 }}>
@@ -552,7 +565,9 @@ export default function SupportDashboard() {
             Gestión global de todos los tickets &nbsp;·&nbsp; <span style={{ textTransform: "capitalize" }}>{currentDate}</span>
           </p>
         </div>
-        <div style={{ display: "flex", gap: 10, position: "relative", zIndex: 1 }} />
+        <div style={{ display: "flex", gap: 10, position: "relative", zIndex: 1, alignItems: "center" }}>
+          <NotificationsBell compact={isMobile} />
+        </div>
       </div>
 
       {/* ── Tab nav ──────────────────────────────────── */}

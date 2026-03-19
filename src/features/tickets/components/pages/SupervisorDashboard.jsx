@@ -11,6 +11,7 @@ import TicketDetail                        from "../TicketDetail.jsx";
 import TicketForm                          from "../../../../services/tickets/components/TicketForm.jsx";
 import Modal                               from "../../../../shared/components/Modal.jsx";
 import Toast                               from "../../../../shared/components/Toast.jsx";
+import NotificationsBell                   from "../../../../shared/components/NotificationsBell.jsx";
 import { useResponsive }                   from "../../../../shared/hooks/use-responsive.js";
 import { applyFilters, defaultFilters, groupByMonth, STATUSES, PRIORITIES, CATEGORIES, ACTIVITY_OPTIONS }
   from "../../../../shared/utils/tickets.js";
@@ -218,6 +219,18 @@ export default function SupervisorDashboard() {
   const [selectedId, setSelectedId] = useState(null);
   const [toast, setToast]           = useState(null);
 
+  useEffect(() => {
+    const handleOpenTicket = (event) => {
+      const ticketId = event.detail?.ticketId;
+      if (!ticketId) return;
+      setView("equipo");
+      setSelectedId(ticketId);
+    };
+
+    window.addEventListener("ticketweb:open-ticket", handleOpenTicket);
+    return () => window.removeEventListener("ticketweb:open-ticket", handleOpenTicket);
+  }, []);
+
   const teamMembers = useMemo(
     () => {
       if (!team) return [];
@@ -324,7 +337,7 @@ export default function SupervisorDashboard() {
         gap:          16,
         boxShadow:    "0 4px 24px rgba(30,91,181,0.25)",
         position:     "relative",
-        overflow:     "hidden",
+        overflow:     "visible",
       }}>
         {/* Decorative circles */}
         <div style={{ position: "absolute", right: -30, top: -30, width: 180, height: 180, borderRadius: "50%", background: "rgba(255,255,255,0.05)" }} />
@@ -345,31 +358,32 @@ export default function SupervisorDashboard() {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowCreate(true)}
-          style={{
-            background:   T.white,
-            color:        T.accent,
-            border:       "none",
-            borderRadius: 10,
-            padding:      "11px 22px",
-            fontSize:     14,
-            fontWeight:   700,
-            fontFamily:   "'DM Sans', sans-serif",
-            cursor:       "pointer",
-            display:      "flex",
-            alignItems:   "center",
-            gap:          8,
-            boxShadow:    "0 2px 12px rgba(0,0,0,0.15)",
-            transition:   "transform 0.15s, box-shadow 0.15s",
-            position:     "relative",
-            zIndex:       1,
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,0.2)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,0.15)"; }}
-        >
-          <Plus size={16} strokeWidth={2.5} /> Nuevo Ticket
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, position: "relative", zIndex: 1 }}>
+          <NotificationsBell compact={isMobile} />
+          <button
+            onClick={() => setShowCreate(true)}
+            style={{
+              background:   T.white,
+              color:        T.accent,
+              border:       "none",
+              borderRadius: 10,
+              padding:      "11px 22px",
+              fontSize:     14,
+              fontWeight:   700,
+              fontFamily:   "'DM Sans', sans-serif",
+              cursor:       "pointer",
+              display:      "flex",
+              alignItems:   "center",
+              gap:          8,
+              boxShadow:    "0 2px 12px rgba(0,0,0,0.15)",
+              transition:   "transform 0.15s, box-shadow 0.15s",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,0.2)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,0.15)"; }}
+          >
+            <Plus size={16} strokeWidth={2.5} /> Nuevo Ticket
+          </button>
+        </div>
       </div>
 
       {/* ── KPI Cards ────────────────────────────────── */}

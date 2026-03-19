@@ -15,10 +15,10 @@ export default function Modal({ title, children, onClose, width = 640 }) {
         inset: 0,
         background: "rgba(15,42,94,0.18)",
         display: "flex",
-        alignItems: isMobile ? "flex-end" : "center",
+        alignItems: "center",
         justifyContent: "center",
         zIndex: 1000,
-        padding: isMobile ? 0 : 20,
+        padding: isMobile ? "12px 8px max(12px, env(safe-area-inset-bottom))" : 20,
         backdropFilter: "blur(10px)",
       }}
       onClick={(event) => event.target === event.currentTarget && onClose()}
@@ -27,12 +27,12 @@ export default function Modal({ title, children, onClose, width = 640 }) {
         style={{
           background: "linear-gradient(180deg, #ffffff 0%, #f8fbff 100%)",
           border: "1px solid #dbeafe",
-          borderRadius: isMobile ? "18px 18px 0 0" : 18,
+          borderRadius: isMobile ? 16 : 18,
           overflow: "hidden",
           width: "100%",
-          maxWidth: isMobile ? "100%" : width,
-          maxHeight: isMobile ? "92vh" : "90vh",
-          minHeight: isMobile ? "55vh" : "auto",
+          maxWidth: isMobile ? "min(100%, 680px)" : width,
+          maxHeight: isMobile ? "min(88vh, 820px)" : "90vh",
+          minHeight: isMobile ? "auto" : "auto",
           display: "flex",
           flexDirection: "column",
           boxShadow: "0 28px 80px rgba(30,91,181,0.22)",
@@ -88,7 +88,7 @@ export default function Modal({ title, children, onClose, width = 640 }) {
         <div
           style={{
             overflowY: "auto",
-            padding: isMobile ? "16px 14px 20px" : "24px",
+            padding: isMobile ? "14px 12px 18px" : "24px",
             background: "linear-gradient(180deg, rgba(255,255,255,0.92) 0%, #f8fbff 100%)",
           }}
         >

@@ -8,6 +8,11 @@ import { config } from "../config.js";
 import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/async-handler.js";
 import { logAudit } from "../services/audit.service.js";
+import {
+  notifySupportNewTicket,
+  notifyTicketComment,
+  notifyTicketStatusChange,
+} from "../services/notification.service.js";
 
 const router = Router();
 const MAX_TICKET_ATTACHMENT_BYTES = 5 * 1024 * 1024;
@@ -211,6 +216,8 @@ router.post(
       details: created.priority,
     });
 
+    await notifySupportNewTicket(created);
+
     return res.status(201).json(created);
   })
 );
@@ -274,6 +281,8 @@ router.post(
       data: { updatedAt: new Date() },
     });
 
+    await notifyTicketComment(ticket, req.user.id, req.user.name, req.user.role);
+
     return res.status(201).json(comment);
   })
 );
@@ -315,6 +324,8 @@ router.post(
       summary: `Ticket status: ${payload.status}`,
       details: payload.note || "",
     });
+
+    await notifyTicketStatusChange(ticket, req.user.id, req.user.name, payload.status);
 
     return res.json(updated);
   })

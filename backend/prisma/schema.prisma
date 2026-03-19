@@ -29,6 +29,7 @@ model User {
   statusChanges  TicketStatus[]
   inventory      InventoryItem[]  @relation("InventoryAssignedUser")
   auditLogs      AuditLog[]       @relation("AuditActor")
+  notifications  Notification[]
 }
 
 model Team {
@@ -150,4 +151,20 @@ model AuditLog {
   actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  userId     String
+  type       String
+  title      String
+  message    String
+  entityType String?
+  entityId   String?
+  readAt     DateTime?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
 }

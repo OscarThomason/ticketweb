@@ -6,6 +6,7 @@ import teamsRoutes from "./teams.routes.js";
 import ticketsRoutes from "./tickets.routes.js";
 import inventoryRoutes from "./inventory.routes.js";
 import auditRoutes from "./audit.routes.js";
+import notificationsRoutes from "./notifications.routes.js";
 
 const router = Router();
 
@@ -28,5 +29,6 @@ router.use("/teams", teamsRoutes);
 router.use("/tickets", ticketsRoutes);
 router.use("/inventory", inventoryRoutes);
 router.use("/audit", auditRoutes);
+router.use("/notifications", notificationsRoutes);
 
 export default router;

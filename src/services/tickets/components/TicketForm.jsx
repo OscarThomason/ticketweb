@@ -10,6 +10,7 @@ import {
   PRIORITIES,
 } from "../../../shared/utils/tickets.js";
 import { useAuth } from "../../../app/providers/auth-context.js";
+import { useResponsive } from "../../../shared/hooks/use-responsive.js";
 import { isBackendEnabled } from "../../api/http-client.js";
 import {
   deleteAttachmentFile,
@@ -32,6 +33,7 @@ const FORM_THEME = {
 
 export default function TicketForm({ onClose, onSuccess }) {
   const { currentUser } = useAuth();
+  const { isMobile } = useResponsive();
   const canChoosePriority = currentUser?.role === "support";
   const fileInputRef = useRef(null);
   const createTicket = useCreateTicket({
@@ -176,7 +178,7 @@ export default function TicketForm({ onClose, onSuccess }) {
       />
       {errors.description && <p style={{ color: "#ef4444", fontSize: 12, marginTop: -12, marginBottom: 12 }}>{errors.description}</p>}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))", gap: 16 }}>
         <Select
           label="Categoría"
           value={form.category}
@@ -227,7 +229,7 @@ export default function TicketForm({ onClose, onSuccess }) {
                 fontSize: 12,
                 fontWeight: 600,
                 lineHeight: 1.3,
-                whiteSpace: "nowrap",
+                whiteSpace: isMobile ? "normal" : "nowrap",
                 boxShadow: "0 8px 18px rgba(18,55,102,0.22)",
                 zIndex: 20,
                 pointerEvents: "none",
@@ -278,15 +280,15 @@ export default function TicketForm({ onClose, onSuccess }) {
           />
           <Upload size={18} style={{ display: "inline", marginRight: 6, color: FORM_THEME.fieldBorderFocus }} />
           Selecciona una imagen
-          <div style={{ marginTop: 6, fontSize: 12, color: FORM_THEME.fieldPlaceholder }}>
+          <div style={{ marginTop: 6, fontSize: 12, color: FORM_THEME.fieldPlaceholder, lineHeight: 1.5 }}>
             PNG o JPG, máximo 5 MB, solo un archivo
           </div>
           {form.attachments.length > 0 && (
             <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
               {form.attachments.map((attachment, index) => (
-                <div key={`${attachment.id}-${index}`} style={{ display: "flex", alignItems: "center", gap: 6, background: "#ffffff", border: "1px solid #bfdcff", borderRadius: 999, padding: "6px 10px", fontSize: 11, color: FORM_THEME.fieldText, boxShadow: "0 4px 10px rgba(30,91,181,0.08)" }}>
+                <div key={`${attachment.id}-${index}`} style={{ display: "flex", alignItems: "center", gap: 6, background: "#ffffff", border: "1px solid #bfdcff", borderRadius: isMobile ? 14 : 999, padding: "6px 10px", fontSize: 11, color: FORM_THEME.fieldText, boxShadow: "0 4px 10px rgba(30,91,181,0.08)", maxWidth: "100%", flexWrap: "wrap", justifyContent: "center" }}>
                   <Paperclip size={12} color={FORM_THEME.fieldBorderFocus} />
-                  <span style={{ fontWeight: 600 }}>{attachment.name}</span>
+                  <span style={{ fontWeight: 600, wordBreak: "break-word" }}>{attachment.name}</span>
                   <span style={{ color: FORM_THEME.fieldPlaceholder }}>
                     ({(attachment.size / 1024 / 1024).toFixed(2)} MB)
                   </span>
@@ -308,9 +310,9 @@ export default function TicketForm({ onClose, onSuccess }) {
         {attachmentError && <p style={{ color: "#ef4444", fontSize: 12, marginTop: 8 }}>{attachmentError}</p>}
       </div>
 
-      <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", paddingTop: 8 }}>
-        <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-        <Button onClick={handleSubmit} disabled={createTicket.isPending}>
+      <div style={{ display: "flex", flexDirection: isMobile ? "column-reverse" : "row", gap: 12, justifyContent: "flex-end", paddingTop: 8 }}>
+        <Button variant="secondary" onClick={onClose} style={isMobile ? { width: "100%" } : undefined}>Cancelar</Button>
+        <Button onClick={handleSubmit} disabled={createTicket.isPending} style={isMobile ? { width: "100%" } : undefined}>
           <Plus size={15} /> {createTicket.isPending ? "Creando..." : "Crear Ticket"}
         </Button>
       </div>
