@@ -38,6 +38,11 @@ async function assertTeamAssignmentsAllowed(teamId, memberIds, supervisorIds) {
       error.statusCode = 400;
       throw error;
     }
+    if (user.role === "SUPERVISOR" && !supervisorIds.includes(userId)) {
+      const error = new Error("Supervisor users must be selected from the supervisor list");
+      error.statusCode = 400;
+      throw error;
+    }
     if (user.assignment && user.assignment.teamId !== teamId) {
       const error = new Error("A user already belongs to another team");
       error.statusCode = 400;
@@ -194,4 +199,3 @@ router.delete(
 );
 
 export default router;
-

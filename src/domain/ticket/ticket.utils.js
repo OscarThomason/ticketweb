@@ -1,28 +1,28 @@
 /**
- * Format an ISO date string → "12 ene 2025"
+ * Format an ISO date string -> "12 ene 2025"
  * @param {string} iso
  * @returns {string}
  */
 export function formatDate(iso) {
-  if (!iso) return "—";
+  if (!iso) return "-";
   return new Date(iso).toLocaleDateString("es-MX", {
-    day:   "2-digit",
+    day: "2-digit",
     month: "short",
-    year:  "numeric",
+    year: "numeric",
   });
 }
 
 /**
- * Format an ISO date string → "12 ene 14:30"
+ * Format an ISO date string -> "12 ene 14:30"
  * @param {string} iso
  * @returns {string}
  */
 export function formatDateTime(iso) {
-  if (!iso) return "—";
+  if (!iso) return "-";
   return new Date(iso).toLocaleDateString("es-MX", {
-    day:    "2-digit",
-    month:  "short",
-    hour:   "2-digit",
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
     minute: "2-digit",
   });
 }
@@ -34,12 +34,12 @@ export function formatDateTime(iso) {
  * @returns {Object}
  */
 export function groupByMonth(tickets) {
-  return tickets.reduce((acc, t) => {
-    const key = new Date(t.createdAt).toLocaleString("es-MX", {
+  return tickets.reduce((acc, ticket) => {
+    const key = new Date(ticket.createdAt).toLocaleString("es-MX", {
       month: "long",
-      year:  "numeric",
+      year: "numeric",
     });
-    acc[key] = [...(acc[key] || []), t];
+    acc[key] = [...(acc[key] || []), ticket];
     return acc;
   }, {});
 }

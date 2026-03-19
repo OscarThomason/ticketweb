@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import { getTicketDisplayId } from "./tickets.js";
 
 export function exportTicketsToCsv(tickets, users = [], teams = [], filename = "historial-tickets.xlsx") {
   const rows = tickets.map((ticket) => {
@@ -6,7 +7,7 @@ export function exportTicketsToCsv(tickets, users = [], teams = [], filename = "
     const team = teams.find((item) => item.memberIds?.includes(ticket.createdBy));
 
     return {
-      id: ticket.id,
+      id: getTicketDisplayId(ticket),
       titulo: ticket.title,
       solicitante: creator?.name || ticket.createdBy || "",
       equipo: team?.name || "",

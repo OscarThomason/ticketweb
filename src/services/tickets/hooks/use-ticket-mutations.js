@@ -71,3 +71,19 @@ export const useAddComment = (options = {}) => {
     ...options,
   });
 };
+
+export const useRateTicketSupport = (options = {}) => {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ ticketId, rating }) => ticketsApi.rateSupport(ticketId, rating),
+    onSuccess: (updated) => {
+      qc.invalidateQueries({ queryKey: ticketKeys.lists() });
+
+      if (updated?.id) {
+        qc.invalidateQueries({ queryKey: ticketKeys.detail(updated.id) });
+      }
+    },
+    ...options,
+  });
+};

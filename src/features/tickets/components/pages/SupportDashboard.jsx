@@ -3,7 +3,7 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import {
   LayoutDashboard, Ticket, History, AlertCircle, Clock,
   CheckCircle2, Pause, Circle, AlertTriangle,
-  ChevronRight, TrendingUp, ShieldCheck, Activity,
+  ChevronRight, TrendingUp, Activity, Star,
   Settings, UserPlus, Users, FolderPlus, Trash2, Edit3, Eye, EyeOff, Monitor, Download, Upload,
 } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -22,10 +22,12 @@ import Toast                     from "../../../../shared/components/Toast.jsx";
 import { useResponsive }         from "../../../../shared/hooks/use-responsive.js";
 import { applyFilters, defaultFilters, groupByMonth, STATUSES, PRIORITIES, CATEGORIES, ACTIVITY_OPTIONS }
   from "../../../../shared/utils/tickets.js";
+import { getTicketDisplayId } from "../../../../shared/utils/tickets.js";
 import { exportTicketsToCsv } from "../../../../shared/utils/export-history.js";
 import { inventoryApi } from "../../../../services/inventory/inventory.api.js";
 import { logAuditEntry } from "../../../../services/audit/audit.api.js";
 import { isBackendEnabled } from "../../../../services/api/http-client.js";
+import BrandMark from "../../../../shared/components/BrandMark.jsx";
 
 function hashPassword(password) {
   let h = 0;
@@ -97,6 +99,27 @@ function normalizePriorityLabel(value) {
 
 function getPriorityStyle(label) {
   return PRIORITY_COLORS[normalizePriorityLabel(label)] || { color: "#64748b", bg: "#f1f5f9", border: "#e2e8f0", chart: "#94a3b8" };
+}
+
+function renderRatingStars(rating) {
+  const value = Number(rating || 0);
+  if (!value) {
+    return <span style={{ fontSize: 12, color: T.textMuted }}>Pendiente</span>;
+  }
+
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
+      {[1, 2, 3, 4, 5].map((index) => (
+        <Star
+          key={index}
+          size={12}
+          color={index <= value ? "#f59e0b" : "#d6e4f5"}
+          fill={index <= value ? "#f59e0b" : "transparent"}
+          strokeWidth={1.8}
+        />
+      ))}
+    </span>
+  );
 }
 
 function Pill({ label, map }) {
@@ -207,6 +230,7 @@ function LightTicketTable({ tickets, onSelect, showUser = false, users = [], tea
             <th style={thS}>Actividad</th>
             <th style={thS}>Prioridad</th>
             <th style={thS}>Estado</th>
+            <th style={thS}>Calificacion</th>
             <th style={thS}>Fecha</th>
             <th style={thS}></th>
           </tr>
@@ -222,7 +246,7 @@ function LightTicketTable({ tickets, onSelect, showUser = false, users = [], tea
             >
               <td style={{ padding: "12px 16px" }}>
                 <span style={{ fontFamily: "monospace", fontSize: 11, fontWeight: 700, color: T.accentLight, background: T.accentPale, padding: "2px 7px", borderRadius: 4 }}>
-                  {t.id}
+                  {getTicketDisplayId(t)}
                 </span>
               </td>
               <td style={{ padding: "12px 16px", maxWidth: 220 }}>
@@ -236,7 +260,7 @@ function LightTicketTable({ tickets, onSelect, showUser = false, users = [], tea
                 return (
                   <td style={{ padding: "12px 16px" }}>
                     <div>
-                      <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: T.textPrimary }}>{creator?.name || t.createdBy}</span>
+                      <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: T.textPrimary }}>{t.createdByName || creator?.name || ""}</span>
                       {team && <span style={{ display: "inline-block", fontSize: 10, color: T.accentLight, background: T.accentPale, padding: "1px 7px", borderRadius: 4, marginTop: 2, fontWeight: 600 }}>{team.name}</span>}
                     </div>
                   </td>
@@ -264,6 +288,7 @@ function LightTicketTable({ tickets, onSelect, showUser = false, users = [], tea
               </td>
               <td style={{ padding: "12px 16px" }}><PriorityPill label={t.priority} /></td>
               <td style={{ padding: "12px 16px" }}><Pill label={t.status}   map={STATUS_COLORS}   /></td>
+              <td style={{ padding: "12px 16px" }}>{renderRatingStars(t.supportRating)}</td>
               <td style={{ padding: "12px 16px" }}><span style={{ fontSize: 12, color: T.textMuted, fontFamily: "monospace" }}>{new Date(t.createdAt).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}</span></td>
               <td style={{ padding: "12px 16px" }}>
                 <div style={{ width: 26, height: 26, borderRadius: 6, background: T.accentPale, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -519,7 +544,7 @@ export default function SupportDashboard() {
         <div style={{ position: "relative", zIndex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <ShieldCheck size={18} color={T.white} />
+              <BrandMark size={24} />
             </div>
             <h1 style={{ margin: 0, fontSize: isMobile ? 20 : 24, fontWeight: 800, fontFamily: "'DM Sans', sans-serif", letterSpacing: "-0.02em" }}>Centro de Soporte</h1>
           </div>
@@ -708,7 +733,7 @@ export default function SupportDashboard() {
       {view === "admin" && (
         <div>
           {/* Admin sub-tabs */}
-          <div style={{ display: "flex", gap: 4, background: T.bgTabBar, borderRadius: 10, padding: 4, marginBottom: 20, width: "fit-content", border: `1px solid ${T.border}` }}>
+          <div style={{ display: "flex", gap: 4, background: T.bgTabBar, borderRadius: 10, padding: 4, marginBottom: 20, width: isMobile ? "100%" : "fit-content", overflowX: "auto", border: `1px solid ${T.border}` }}>
             <Tab label="Usuarios" icon={Users} active={adminSubView === "users"} onClick={() => setAdminSubView("users")} />
             <Tab label="Equipos" icon={FolderPlus} active={adminSubView === "teams"} onClick={() => setAdminSubView("teams")} />
             <Tab label="Inventario" icon={Monitor} active={adminSubView === "inventory"} onClick={() => setAdminSubView("inventory")} />
@@ -724,12 +749,12 @@ export default function SupportDashboard() {
                   <span style={{ fontSize: 14, fontWeight: 700, color: T.textPrimary, fontFamily: "'DM Sans', sans-serif" }}>Gestión de Usuarios</span>
                   <span style={{ fontSize: 12, background: T.accentPale, color: T.accent, border: `1px solid ${T.borderStrong}`, borderRadius: 10, padding: "1px 10px", fontWeight: 700, fontFamily: "monospace" }}>{filteredUsers.length}</span>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", width: isMobile ? "100%" : "auto" }}>
                   <input
                     value={userSearch}
                     onChange={(e) => setUserSearch(e.target.value)}
                     placeholder="Buscar por nombre, correo o rol..."
-                    style={{ minWidth: 220, background: T.white, border: `1px solid ${T.border}`, borderRadius: 8, padding: "8px 12px", color: T.textPrimary, fontSize: 13, fontFamily: "'DM Sans', sans-serif" }}
+                    style={{ minWidth: isMobile ? "100%" : 220, width: isMobile ? "100%" : "auto", background: T.white, border: `1px solid ${T.border}`, borderRadius: 8, padding: "8px 12px", color: T.textPrimary, fontSize: 13, fontFamily: "'DM Sans', sans-serif" }}
                   />
                   <input
                     ref={userImportInputRef}
@@ -740,23 +765,75 @@ export default function SupportDashboard() {
                   />
                   <button
                     onClick={() => handleExportUsersExcel()}
-                    style={{ background: T.white, border: `1px solid ${T.border}`, borderRadius: 8, padding: "9px 14px", fontSize: 13, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: T.accent }}
+                    style={{ width: isMobile ? "100%" : "auto", justifyContent: "center", background: T.white, border: `1px solid ${T.border}`, borderRadius: 8, padding: "9px 14px", fontSize: 13, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: T.accent }}
                   >
                     <Download size={14} /> Exportar Excel
                   </button>
                   <button
                     onClick={() => userImportInputRef.current?.click()}
-                    style={{ background: T.white, border: `1px solid ${T.border}`, borderRadius: 8, padding: "9px 14px", fontSize: 13, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: T.accent }}
+                    style={{ width: isMobile ? "100%" : "auto", justifyContent: "center", background: T.white, border: `1px solid ${T.border}`, borderRadius: 8, padding: "9px 14px", fontSize: 13, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: T.accent }}
                   >
                     <Upload size={14} /> Importar Excel
                   </button>
-                  <button onClick={() => { setEditingUser(null); setShowCreateUser(true); }} style={{ background: `linear-gradient(135deg, ${T.accent} 0%, ${T.accentLight} 100%)`, color: T.white, border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 2px 10px rgba(30,91,181,0.25)", transition: "opacity 0.2s" }}
+                  <button onClick={() => { setEditingUser(null); setShowCreateUser(true); }} style={{ width: isMobile ? "100%" : "auto", justifyContent: "center", background: `linear-gradient(135deg, ${T.accent} 0%, ${T.accentLight} 100%)`, color: T.white, border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 2px 10px rgba(30,91,181,0.25)", transition: "opacity 0.2s" }}
                     onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
                     onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}>
                     <UserPlus size={14} /> Crear Usuario
                   </button>
                 </div>
               </div>
+              {isMobile ? (
+                <div style={{ display: "grid", gap: 12, padding: 12 }}>
+                  {filteredUsers.map((u) => {
+                    const team = allTeams.find((t) => t.memberIds?.includes(u.id));
+                    const roleLbl = { user: "Usuario", supervisor: "Supervisor", support: "Soporte" }[u.role] || u.role;
+                    const roleColor = { user: "#64748b", supervisor: "#7c3aed", support: T.accent }[u.role];
+                    return (
+                      <div key={u.id} onClick={() => { setViewingUser(u); }} style={{ border: `1px solid ${T.border}`, borderRadius: 12, background: T.white, padding: 14, boxShadow: "0 2px 10px rgba(30,91,181,0.06)", cursor: "pointer" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                          <div style={{ width: 38, height: 38, borderRadius: "50%", background: T.accentPale, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: T.accent }}>{u.avatar || "??"}</div>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: T.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.name}</p>
+                            <p style={{ margin: "2px 0 0", fontSize: 11, color: T.textSecondary, fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email}</p>
+                          </div>
+                        </div>
+                        <div style={{ display: "grid", gap: 8 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                            <span style={{ fontSize: 11, color: T.textMuted, textTransform: "uppercase", fontWeight: 700 }}>Rol</span>
+                            <span style={{ background: `${roleColor}14`, color: roleColor, border: `1px solid ${roleColor}30`, borderRadius: 5, padding: "2px 10px", fontSize: 11, fontWeight: 700 }}>{roleLbl}</span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                            <span style={{ fontSize: 11, color: T.textMuted, textTransform: "uppercase", fontWeight: 700 }}>Equipo</span>
+                            <span style={{ fontSize: 12, color: T.textSecondary, textAlign: "right" }}>{team?.name || "Sin equipo"}</span>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                          <button onClick={(e) => { e.stopPropagation(); setEditingUser(u); setShowCreateUser(true); }} style={{ flex: 1, background: T.accentPale, border: `1px solid ${T.border}`, borderRadius: 8, padding: "8px 10px", cursor: "pointer", color: T.accent, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontWeight: 700 }}>
+                            <Edit3 size={13} /> Editar
+                          </button>
+                          <button onClick={async (e) => {
+                            e.stopPropagation();
+                            await usersApi.delete(u.id);
+                            logAuditEntry({
+                              actorId: currentUser.id,
+                              actorName: currentUser.name,
+                              action: "eliminacion",
+                              entityType: "usuario",
+                              entityId: u.id,
+                              summary: `Usuario eliminado: ${u.name}`,
+                              details: `Correo: ${u.email} · Rol: ${u.role}`,
+                            });
+                            await Promise.all([refetchUsers(), refetchTeams()]);
+                            setToast(`Usuario ${u.name} eliminado`);
+                          }} style={{ flex: 1, background: T.dangerPale, border: "1px solid #fecaca", borderRadius: 8, padding: "8px 10px", cursor: "pointer", color: T.danger, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontWeight: 700 }}>
+                            <Trash2 size={13} /> Eliminar
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
@@ -816,6 +893,7 @@ export default function SupportDashboard() {
                   </tbody>
                 </table>
               </div>
+              )}
             </div>
           )}
 
@@ -828,7 +906,7 @@ export default function SupportDashboard() {
                   <span style={{ fontSize: 14, fontWeight: 700, color: T.textPrimary, fontFamily: "'DM Sans', sans-serif" }}>Gestión de Equipos</span>
                   <span style={{ fontSize: 12, background: T.accentPale, color: T.accent, border: `1px solid ${T.borderStrong}`, borderRadius: 10, padding: "1px 10px", fontWeight: 700, fontFamily: "monospace" }}>{filteredTeams.length}</span>
                 </div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", width: isMobile ? "100%" : "auto" }}>
                   <input
                     value={teamSearch}
                     onChange={(e) => setTeamSearch(e.target.value)}
@@ -837,13 +915,64 @@ export default function SupportDashboard() {
                     onFocus={(e) => (e.target.style.borderColor = T.accent)}
                     onBlur={(e) => (e.target.style.borderColor = T.border)}
                   />
-                  <button onClick={() => { setEditingTeam(null); setShowCreateTeam(true); }} style={{ background: `linear-gradient(135deg, ${T.accent} 0%, ${T.accentLight} 100%)`, color: T.white, border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 2px 10px rgba(30,91,181,0.25)", transition: "opacity 0.2s" }}
+                  <button onClick={() => { setEditingTeam(null); setShowCreateTeam(true); }} style={{ width: isMobile ? "100%" : "auto", justifyContent: "center", background: `linear-gradient(135deg, ${T.accent} 0%, ${T.accentLight} 100%)`, color: T.white, border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 2px 10px rgba(30,91,181,0.25)", transition: "opacity 0.2s" }}
                     onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
                     onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}>
                     <FolderPlus size={14} /> Crear Equipo
                   </button>
                 </div>
               </div>
+              {isMobile ? (
+                <div style={{ display: "grid", gap: 12, padding: 12 }}>
+                  {filteredTeams.map((team) => {
+                    const supervisorIds = team.supervisorIds || (team.supervisorId ? [team.supervisorId] : []);
+                    const supervisors = allUsers.filter((u) => supervisorIds.includes(u.id));
+                    const members = allUsers.filter((u) => team.memberIds?.includes(u.id) && !supervisorIds.includes(u.id));
+                    return (
+                      <div key={team.id} onClick={() => { setViewingTeam(team); }} style={{ border: `1px solid ${T.border}`, borderRadius: 12, background: T.white, padding: 14, boxShadow: "0 2px 10px rgba(30,91,181,0.06)", cursor: "pointer" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start", marginBottom: 12 }}>
+                          <div style={{ minWidth: 0 }}>
+                            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: T.textPrimary }}>{team.name}</p>
+                            <p style={{ margin: "4px 0 0", fontSize: 11, color: T.textMuted, textTransform: "uppercase", fontWeight: 700 }}>Supervision</p>
+                            <p style={{ margin: "2px 0 0", fontSize: 12, color: T.textSecondary }}>{supervisors.length > 0 ? supervisors.map((sup) => sup.name).join(", ") : "Sin supervisor"}</p>
+                          </div>
+                          <span style={{ background: T.accentPale, color: T.accent, borderRadius: 10, padding: "3px 10px", fontSize: 12, fontWeight: 700, fontFamily: "monospace", flexShrink: 0 }}>{members.length}</span>
+                        </div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+                          {members.length > 0 ? members.map((m) => (
+                            <span key={m.id} style={{ background: T.accentPale, color: T.accent, borderRadius: 999, padding: "4px 8px", fontSize: 11, fontWeight: 600 }}>{m.name}</span>
+                          )) : <span style={{ color: T.textMuted, fontSize: 12 }}>Sin miembros</span>}
+                        </div>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingTeam(team);
+                          }} style={{ flex: 1, background: T.accentPale, border: `1px solid ${T.border}`, borderRadius: 8, padding: "8px 10px", cursor: "pointer", color: T.accent, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontWeight: 700 }}>
+                            <Edit3 size={13} /> Editar
+                          </button>
+                          <button onClick={async (e) => {
+                            e.stopPropagation();
+                            await teamsApi.delete(team.id);
+                            logAuditEntry({
+                              actorId: currentUser.id,
+                              actorName: currentUser.name,
+                              action: "eliminacion",
+                              entityType: "equipo",
+                              entityId: team.id,
+                              summary: `Equipo eliminado: ${team.name}`,
+                              details: `Miembros registrados: ${members.length}`,
+                            });
+                            await Promise.all([refetchTeams(), refetchUsers()]);
+                            setToast(`Equipo ${team.name} eliminado`);
+                          }} style={{ flex: 1, background: T.dangerPale, border: "1px solid #fecaca", borderRadius: 8, padding: "8px 10px", cursor: "pointer", color: T.danger, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontWeight: 700 }}>
+                            <Trash2 size={13} /> Eliminar
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
@@ -857,7 +986,7 @@ export default function SupportDashboard() {
                     {filteredTeams.map((team, i) => {
                       const supervisorIds = team.supervisorIds || (team.supervisorId ? [team.supervisorId] : []);
                       const supervisors = allUsers.filter((u) => supervisorIds.includes(u.id));
-                      const members = allUsers.filter((u) => team.memberIds?.includes(u.id));
+                      const members = allUsers.filter((u) => team.memberIds?.includes(u.id) && !supervisorIds.includes(u.id));
                       return (
                         <tr
                           key={team.id}
@@ -910,6 +1039,7 @@ export default function SupportDashboard() {
                   </tbody>
                 </table>
               </div>
+              )}
             </div>
           )}
 
@@ -930,7 +1060,7 @@ export default function SupportDashboard() {
       {/* ── Modals ───────────────────────────────────── */}
       {selectedId && (
         <Modal title="Detalle del Ticket" onClose={() => { setSelectedId(null); refetch(); }} width={700}>
-          <TicketDetail ticketId={selectedId} canChangeStatus={true} canComment={true} onClose={() => setSelectedId(null)} onUpdate={refetch} />
+          <TicketDetail ticketId={selectedId} canChangeStatus={true} canComment={true} onClose={() => setSelectedId(null)} onUpdate={refetch} knownUsers={allUsers} />
         </Modal>
       )}
 
@@ -1016,7 +1146,7 @@ function UserInfoModal({ user, teams, onClose }) {
       <p style={rowSt}><span style={labelSt}>Rol:</span>{roleLbl}</p>
       <p style={rowSt}><span style={labelSt}>Equipo:</span>{team?.name || "Sin equipo"}</p>
       <p style={rowSt}>
-        <span style={labelSt}>Equipo de computo:</span>
+        <span style={labelSt}>Equipo de cómputo:</span>
         {assignedEquipment
           ? `${assignedEquipment.assetName || "Equipo"} (${assignedEquipment.serialNumber || "Sin serie"})`
           : "Sin equipo asignado"}
@@ -1031,7 +1161,7 @@ function UserInfoModal({ user, teams, onClose }) {
 function TeamInfoModal({ team, users, onClose }) {
   const supervisorIds = team?.supervisorIds || (team?.supervisorId ? [team.supervisorId] : []);
   const supervisors = users.filter((u) => supervisorIds.includes(u.id));
-  const members = users.filter((u) => team?.memberIds?.includes(u.id));
+  const members = users.filter((u) => team?.memberIds?.includes(u.id) && !supervisorIds.includes(u.id));
   const rowSt = { margin: "0 0 10px", fontSize: 13, color: T.textSecondary };
   const labelSt = { display: "inline-block", minWidth: 110, fontWeight: 700, color: T.textPrimary };
   return (
@@ -1406,7 +1536,7 @@ function UserInventoryFormModal({ user, users, teams, currentUser, onClose, onSu
 
       <div style={{ marginBottom: 20, padding: 18, borderRadius: 12, background: "#f8fbff", border: `1px solid ${T.border}` }}>
         <div style={{ marginBottom: 12 }}>
-          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: T.textPrimary, fontFamily: "'DM Sans', sans-serif" }}>Equipo de Computo (Inventario)</p>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: T.textPrimary, fontFamily: "'DM Sans', sans-serif" }}>Equipo de Cómputo (Inventario)</p>
           <p style={{ margin: "4px 0 0", fontSize: 12, color: T.textSecondary, fontFamily: "'DM Sans', sans-serif" }}>
             Selecciona un equipo ya registrado en inventario. No se crean equipos desde este formulario.
           </p>
@@ -1541,7 +1671,7 @@ function TeamEditModal({ team, users, currentUser, onClose, onSuccess }) {
     memberIds: team?.memberIds || [],
   });
   const [errors, setErrors] = useState({});
-  const eligibleUsers = users.filter((user) => user.role !== "support");
+  const eligibleUsers = users.filter((user) => user.role === "user");
   const supervisors = users.filter((u) => u.role === "supervisor");
 
   const toggleSupervisor = (userId) => {

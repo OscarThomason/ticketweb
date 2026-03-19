@@ -5,6 +5,13 @@ function toPublicRole(role) {
   return String(role || "").toLowerCase();
 }
 
+function toEffectiveRole(user) {
+  const role = String(user?.role || "").toUpperCase();
+  if (role === "SUPPORT") return "support";
+  if (role === "SUPERVISOR" && user?.assignment?.isSupervisor) return "supervisor";
+  return "user";
+}
+
 export async function requireAuth(req, res, next) {
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
@@ -25,7 +32,8 @@ export async function requireAuth(req, res, next) {
       id: user.id,
       name: user.name,
       email: user.email,
-      role: toPublicRole(user.role),
+      role: toEffectiveRole(user),
+      profileRole: toPublicRole(user.role),
       teamId: user.assignment?.teamId || null,
     };
     return next();
@@ -44,4 +52,3 @@ export function requireRole(...roles) {
     return next();
   };
 }
-

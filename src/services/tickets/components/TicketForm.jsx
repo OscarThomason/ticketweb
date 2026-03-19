@@ -10,6 +10,7 @@ import {
   PRIORITIES,
 } from "../../../shared/utils/tickets.js";
 import { useAuth } from "../../../app/providers/auth-context.js";
+import { isBackendEnabled } from "../../api/http-client.js";
 import {
   deleteAttachmentFile,
   saveAttachmentFile,
@@ -17,6 +18,8 @@ import {
 import { useCreateTicket } from "../hooks/use-ticket-mutations.js";
 
 const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg"];
+const ALLOWED_IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg"];
 
 const FORM_THEME = {
   fieldBg: "#eaf4ff",
@@ -48,12 +51,13 @@ export default function TicketForm({ onClose, onSuccess }) {
   });
   const [errors, setErrors] = useState({});
   const [attachmentError, setAttachmentError] = useState("");
+  const [showPriorityHelp, setShowPriorityHelp] = useState(false);
 
   const validate = () => {
     const nextErrors = {};
 
-    if (!form.title.trim()) nextErrors.title = "El titulo es requerido";
-    if (!form.description.trim()) nextErrors.description = "La descripcion es requerida";
+    if (!form.title.trim()) nextErrors.title = "El título es requerido";
+    if (!form.description.trim()) nextErrors.description = "La descripción es requerida";
 
     return nextErrors;
   };
@@ -74,41 +78,61 @@ export default function TicketForm({ onClose, onSuccess }) {
   };
 
   const handleFileSelect = async (event) => {
-    const selectedFiles = Array.from(event.target.files ?? []);
+    const file = event.target.files?.[0];
 
-    if (selectedFiles.length === 0) return;
+    if (!file) return;
 
     setAttachmentError("");
 
-    const validAttachments = [];
+    const isAllowedType =
+      ALLOWED_IMAGE_TYPES.includes(file.type)
+      || ALLOWED_IMAGE_EXTENSIONS.some((extension) => file.name.toLowerCase().endsWith(extension));
 
-    for (const file of selectedFiles) {
-      if (file.size > MAX_ATTACHMENT_SIZE) {
-        setAttachmentError(`El archivo "${file.name}" supera el límite de 5 MB.`);
-        continue;
-      }
+    if (!isAllowedType) {
+      setAttachmentError("Solo se permite una imagen PNG o JPG.");
+      event.target.value = "";
+      return;
+    }
 
-      const savedAttachment = await saveAttachmentFile(file);
-      validAttachments.push({
+    if (file.size > MAX_ATTACHMENT_SIZE) {
+      setAttachmentError(`El archivo "${file.name}" supera el límite de 5 MB.`);
+      event.target.value = "";
+      return;
+    }
+
+    if (isBackendEnabled()) {
+      setForm((prev) => ({
+        ...prev,
+        attachments: [{
+          id: `temp-${Date.now()}`,
+          name: file.name,
+          size: file.size,
+          type: file.type || "image/jpeg",
+          file,
+        }],
+      }));
+      event.target.value = "";
+      return;
+    }
+
+    const savedAttachment = await saveAttachmentFile(file);
+    setForm((prev) => ({
+      ...prev,
+      attachments: [{
         id: savedAttachment.id,
         name: savedAttachment.name,
         size: savedAttachment.size,
         type: savedAttachment.type,
-      });
-    }
-
-    if (validAttachments.length > 0) {
-      setForm((prev) => ({
-        ...prev,
-        attachments: [...prev.attachments, ...validAttachments],
-      }));
-    }
+      }],
+    }));
 
     event.target.value = "";
   };
 
   const removeAttachment = async (attachmentId) => {
-    await deleteAttachmentFile(attachmentId);
+    if (!isBackendEnabled()) {
+      await deleteAttachmentFile(attachmentId);
+    }
     setForm((prev) => ({
       ...prev,
       attachments: prev.attachments.filter((attachment) => attachment.id !== attachmentId),
@@ -118,7 +142,7 @@ export default function TicketForm({ onClose, onSuccess }) {
   return (
     <div>
       <Input
-        label="Titulo *"
+        label="Título *"
         placeholder="Describe brevemente el problema..."
         value={form.title}
         onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
@@ -135,7 +159,7 @@ export default function TicketForm({ onClose, onSuccess }) {
       {errors.title && <p style={{ color: "#ef4444", fontSize: 12, marginTop: -12, marginBottom: 12 }}>{errors.title}</p>}
 
       <Textarea
-        label="Descripcion *"
+        label="Descripción *"
         placeholder="Explica el problema con detalle..."
         value={form.description}
         onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
@@ -154,7 +178,7 @@ export default function TicketForm({ onClose, onSuccess }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 16 }}>
         <Select
-          label="Categoria"
+          label="Categoría"
           value={form.category}
           onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))}
           options={CATEGORIES}
@@ -167,7 +191,11 @@ export default function TicketForm({ onClose, onSuccess }) {
             fontFamily: "'DM Sans', sans-serif",
           }}
         />
-        <div title={!canChoosePriority ? "La prioridad la concede support" : ""}>
+        <div
+          style={{ position: "relative" }}
+          onMouseEnter={() => !canChoosePriority && setShowPriorityHelp(true)}
+          onMouseLeave={() => !canChoosePriority && setShowPriorityHelp(false)}
+        >
           <Select
             label="Prioridad"
             value={form.priority}
@@ -185,9 +213,32 @@ export default function TicketForm({ onClose, onSuccess }) {
               cursor: canChoosePriority ? "pointer" : "not-allowed",
             }}
           />
+          {!canChoosePriority && showPriorityHelp && (
+            <div
+              style={{
+                position: "absolute",
+                left: "50%",
+                bottom: "calc(100% + 8px)",
+                transform: "translateX(-50%)",
+                background: "#123766",
+                color: "#ffffff",
+                padding: "8px 10px",
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 600,
+                lineHeight: 1.3,
+                whiteSpace: "nowrap",
+                boxShadow: "0 8px 18px rgba(18,55,102,0.22)",
+                zIndex: 20,
+                pointerEvents: "none",
+              }}
+            >
+              La prioridad la asigna support
+            </div>
+          )}
         </div>
         <Select
-          label="Te impide trabajar?"
+          label="¿Te impide trabajar?"
           value={form.activity}
           onChange={(event) => setForm((prev) => ({ ...prev, activity: event.target.value }))}
           options={ACTIVITY_OPTIONS}
@@ -204,7 +255,7 @@ export default function TicketForm({ onClose, onSuccess }) {
 
       <div style={{ marginBottom: 16 }}>
         <label style={{ display: "block", marginBottom: 6, fontSize: 11, fontWeight: 700, color: FORM_THEME.label, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'DM Sans', sans-serif" }}>
-          Archivos adjuntos
+          Captura adjunta
         </label>
         <div
           style={{ background: "#eef6ff", border: "1.5px dashed #93c5fd", borderRadius: 12, padding: 18, textAlign: "center", cursor: "pointer", color: FORM_THEME.fieldPlaceholder, fontSize: 13, transition: "border-color 0.2s, background 0.2s" }}
@@ -221,14 +272,14 @@ export default function TicketForm({ onClose, onSuccess }) {
           <input
             ref={fileInputRef}
             type="file"
-            multiple
+            accept=".png,.jpg,.jpeg,image/png,image/jpeg"
             hidden
             onChange={handleFileSelect}
           />
           <Upload size={18} style={{ display: "inline", marginRight: 6, color: FORM_THEME.fieldBorderFocus }} />
-          Selecciona uno o varios archivos
+          Selecciona una imagen
           <div style={{ marginTop: 6, fontSize: 12, color: FORM_THEME.fieldPlaceholder }}>
-            Tamaño máximo por archivo: 5 MB
+            PNG o JPG, máximo 5 MB, solo un archivo
           </div>
           {form.attachments.length > 0 && (
             <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>

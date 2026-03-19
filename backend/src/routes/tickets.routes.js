@@ -1,11 +1,24 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+import crypto from "node:crypto";
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
+import { config } from "../config.js";
 import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/async-handler.js";
 import { logAudit } from "../services/audit.service.js";
 
 const router = Router();
+const MAX_TICKET_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+const ALLOWED_TICKET_ATTACHMENT_TYPES = new Set(["image/png", "image/jpeg", "image/jpg"]);
+
+const ticketAttachmentSchema = z.object({
+  fileName: z.string().min(1),
+  mimeType: z.string().min(1),
+  sizeBytes: z.number().int().positive(),
+  base64: z.string().min(1),
+});
 
 const createTicketSchema = z.object({
   title: z.string().min(3),
@@ -13,7 +26,7 @@ const createTicketSchema = z.object({
   category: z.string().min(1),
   priority: z.string().min(1),
   activity: z.string().min(1),
-  attachments: z.array(z.string()).optional(),
+  attachments: z.array(ticketAttachmentSchema).max(1).optional(),
 });
 
 const updateTicketSchema = z.object({
@@ -23,7 +36,7 @@ const updateTicketSchema = z.object({
   priority: z.string().optional(),
   activity: z.string().optional(),
   status: z.string().optional(),
-  attachments: z.array(z.string()).optional(),
+  attachments: z.array(z.union([z.string(), z.record(z.any())])).optional(),
 });
 
 const addCommentSchema = z.object({
@@ -34,6 +47,95 @@ const updateStatusSchema = z.object({
   status: z.string().min(1),
   note: z.string().optional(),
 });
+
+const rateSupportSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+});
+
+function generateTicketCode() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let suffix = "";
+  for (let index = 0; index < 5; index += 1) {
+    suffix += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return `TK-${suffix}`;
+}
+
+async function createUniqueTicketCode() {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const code = generateTicketCode();
+    const existing = await prisma.ticket.findUnique({ where: { code } });
+    if (!existing) return code;
+  }
+
+  const fallback = `TK-${Date.now().toString(36).slice(-5).toUpperCase()}`;
+  return fallback;
+}
+
+async function ensureTicketUploadDir() {
+  const dir = path.resolve(config.uploadDir, "tickets");
+  await fs.mkdir(dir, { recursive: true });
+  return dir;
+}
+
+async function saveTicketAttachments(ticketId, attachments = []) {
+  if (!Array.isArray(attachments) || attachments.length === 0) return [];
+
+  const dir = await ensureTicketUploadDir();
+  const savedAttachments = [];
+
+  for (const attachment of attachments.slice(0, 1)) {
+    if (attachment.sizeBytes > MAX_TICKET_ATTACHMENT_BYTES) {
+      throw new Error("Ticket attachment max size is 5MB");
+    }
+
+    if (!ALLOWED_TICKET_ATTACHMENT_TYPES.has(attachment.mimeType)) {
+      throw new Error("Only PNG and JPG images are allowed");
+    }
+
+    const extension = path.extname(attachment.fileName || "").toLowerCase() || ".jpg";
+    const safeName = `${ticketId}-${crypto.randomUUID()}${extension}`;
+    const fileBuffer = Buffer.from(attachment.base64, "base64");
+
+    if (fileBuffer.length > MAX_TICKET_ATTACHMENT_BYTES) {
+      throw new Error("Ticket attachment max size is 5MB");
+    }
+
+    const fullPath = path.join(dir, safeName);
+    await fs.writeFile(fullPath, fileBuffer);
+
+    savedAttachments.push({
+      id: crypto.randomUUID(),
+      name: attachment.fileName,
+      size: attachment.sizeBytes,
+      type: attachment.mimeType,
+      path: path.join("tickets", safeName).replaceAll("\\", "/"),
+      uploadedAt: new Date().toISOString(),
+    });
+  }
+
+  return savedAttachments;
+}
+
+const ticketInclude = {
+  createdBy: {
+    select: {
+      id: true,
+      name: true,
+    },
+  },
+  comments: {
+    include: {
+      author: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  },
+  statusHistory: true,
+};
 
 router.use(requireAuth);
 
@@ -56,10 +158,7 @@ router.get(
 
     const tickets = await prisma.ticket.findMany({
       where,
-      include: {
-        comments: true,
-        statusHistory: true,
-      },
+      include: ticketInclude,
       orderBy: { createdAt: "desc" },
     });
 
@@ -76,12 +175,20 @@ router.post(
       where: { userId: req.user.id },
     });
 
+    let savedAttachments = [];
+    try {
+      savedAttachments = await saveTicketAttachments(req.user.id, payload.attachments || []);
+    } catch (error) {
+      return res.status(400).json({ message: error.message || "Invalid ticket attachment" });
+    }
+
     const created = await prisma.ticket.create({
       data: {
         ...payload,
+        code: await createUniqueTicketCode(),
         createdById: req.user.id,
         teamId: assignment?.teamId || null,
-        attachments: payload.attachments || [],
+        attachments: savedAttachments,
         status: "Abierto",
         statusHistory: {
           create: {
@@ -91,10 +198,7 @@ router.post(
           },
         },
       },
-      include: {
-        comments: true,
-        statusHistory: true,
-      },
+      include: ticketInclude,
     });
 
     await logAudit({
@@ -116,10 +220,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const ticket = await prisma.ticket.findUnique({
       where: { id: req.params.id },
-      include: {
-        comments: true,
-        statusHistory: true,
-      },
+      include: ticketInclude,
     });
     if (!ticket) return res.status(404).json({ message: "Ticket not found" });
     return res.json(ticket);
@@ -136,6 +237,7 @@ router.put(
     const ticket = await prisma.ticket.update({
       where: { id: req.params.id },
       data: updates,
+      include: ticketInclude,
     });
 
     await logAudit({
@@ -187,6 +289,12 @@ router.post(
       where: { id: ticket.id },
       data: {
         status: payload.status,
+        closedBySupportId:
+          payload.status === "Cerrado" && req.user.role === "support"
+            ? req.user.id
+            : payload.status === "Cerrado"
+              ? ticket.closedBySupportId
+              : null,
         statusHistory: {
           create: {
             status: payload.status,
@@ -195,9 +303,7 @@ router.post(
           },
         },
       },
-      include: {
-        statusHistory: true,
-      },
+      include: ticketInclude,
     });
 
     await logAudit({
@@ -214,5 +320,59 @@ router.post(
   })
 );
 
-export default router;
+router.post(
+  "/:id/rating",
+  asyncHandler(async (req, res) => {
+    const payload = rateSupportSchema.parse(req.body);
 
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: req.params.id },
+      include: {
+        statusHistory: {
+          orderBy: { changedAt: "asc" },
+        },
+      },
+    });
+
+    if (!ticket) return res.status(404).json({ message: "Ticket not found" });
+    if (req.user.role !== "user") return res.status(403).json({ message: "Only users can rate support" });
+    if (ticket.createdById !== req.user.id) return res.status(403).json({ message: "You can only rate your own tickets" });
+    if (ticket.status !== "Cerrado") return res.status(400).json({ message: "Only closed tickets can be rated" });
+
+    const closerId = ticket.closedBySupportId
+      || [...ticket.statusHistory].reverse().find((entry) => entry.status === "Cerrado")?.changedById
+      || null;
+
+    const closer = closerId
+      ? await prisma.user.findUnique({
+          where: { id: closerId },
+          select: { id: true, role: true, name: true },
+        })
+      : null;
+    const supportCloserId = closer?.role === "SUPPORT" ? closer.id : ticket.closedBySupportId || null;
+
+    const updated = await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: {
+        supportRating: payload.rating,
+        supportRatedAt: new Date(),
+        closedBySupportId: supportCloserId,
+      },
+      include: ticketInclude,
+    });
+
+    await logAudit({
+      actorId: req.user.id,
+      actorName: req.user.name,
+      action: "rate_support",
+      entityType: "ticket",
+      entityId: ticket.id,
+      summary: `Support rated: ${payload.rating} stars`,
+      details: closer?.name || "",
+    });
+
+    return res.json(updated);
+  })
+);
+
+export default router;

@@ -230,7 +230,7 @@ export default function InventoryAdminPanel({ users, teams, currentUser, onToast
               {itemsWithUsers.length}
             </span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginLeft: "auto" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginLeft: "auto", width: isMobile ? "100%" : "auto" }}>
             <input
               ref={importInputRef}
               type="file"
@@ -238,7 +238,7 @@ export default function InventoryAdminPanel({ users, teams, currentUser, onToast
               onChange={handleImportInventoryExcel}
               style={{ display: "none" }}
             />
-            <div style={{ position: "relative", minWidth: 290 }}>
+            <div style={{ position: "relative", minWidth: isMobile ? "100%" : 290, width: isMobile ? "100%" : "auto" }}>
               <ScanBarcode size={15} color={T.textMuted} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)" }} />
               <input
                 value={serialSearch}
@@ -249,13 +249,13 @@ export default function InventoryAdminPanel({ users, teams, currentUser, onToast
             </div>
             <button
               onClick={handleExportInventoryExcel}
-              style={{ background: T.white, border: `1px solid ${T.border}`, borderRadius: 8, padding: "9px 14px", fontSize: 13, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: T.accent }}
+              style={{ width: isMobile ? "100%" : "auto", justifyContent: "center", background: T.white, border: `1px solid ${T.border}`, borderRadius: 8, padding: "9px 14px", fontSize: 13, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: T.accent }}
             >
               <Download size={14} /> Exportar Excel
             </button>
             <button
               onClick={() => importInputRef.current?.click()}
-              style={{ background: T.white, border: `1px solid ${T.border}`, borderRadius: 8, padding: "9px 14px", fontSize: 13, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: T.accent }}
+              style={{ width: isMobile ? "100%" : "auto", justifyContent: "center", background: T.white, border: `1px solid ${T.border}`, borderRadius: 8, padding: "9px 14px", fontSize: 13, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: T.accent }}
             >
               <Upload size={14} /> Importar Excel
             </button>
@@ -264,7 +264,7 @@ export default function InventoryAdminPanel({ users, teams, currentUser, onToast
                 setEditingItem(null);
                 setShowCreate(true);
               }}
-              style={{ background: `linear-gradient(135deg, ${T.accent} 0%, ${T.accentLight} 100%)`, color: T.white, border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 2px 10px rgba(30,91,181,0.25)" }}
+              style={{ width: isMobile ? "100%" : "auto", justifyContent: "center", background: `linear-gradient(135deg, ${T.accent} 0%, ${T.accentLight} 100%)`, color: T.white, border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 2px 10px rgba(30,91,181,0.25)" }}
             >
               <PackagePlus size={14} /> Agregar Equipo
             </button>
@@ -585,6 +585,7 @@ function InventoryDetailModal({ item, onToast }) {
 }
 
 function InventoryFormModal({ item, users, teams, currentUser, onClose, onSuccess, onCommentAdded }) {
+  const { isMobile } = useResponsive();
   const isEdit = !!item;
   const [form, setForm] = useState({ ...emptyInventoryForm, ...item });
   const [errors, setErrors] = useState({});
@@ -805,7 +806,7 @@ function InventoryFormModal({ item, users, teams, currentUser, onClose, onSucces
 
   return (
     <div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
         <Field label="Nombre del equipo" error={errors.assetName} labelStyle={lblSt}>
           <input value={form.assetName} onChange={set("assetName")} style={inputSt} placeholder="Ej. Laptop Lenovo T14" />
         </Field>
@@ -922,7 +923,7 @@ function InventoryFormModal({ item, users, teams, currentUser, onClose, onSucces
 
       {isEdit && (
         <div style={{ background: "#f8fbff", border: "1px solid #dbeafe", borderRadius: 12, padding: 14, marginBottom: 18 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, gap: 10, flexWrap: "wrap" }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: "#4a6fa5" }}>Agregar mantenimiento</span>
             <span style={{ fontSize: 12, color: "#8aafd4" }}>Mantenimientos: {item.comments?.length || 0}</span>
           </div>
@@ -940,25 +941,25 @@ function InventoryFormModal({ item, users, teams, currentUser, onClose, onSucces
               </div>
             ))}
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexDirection: isMobile ? "column" : "row" }}>
             <input
               value={comment}
               onChange={(event) => setComment(event.target.value)}
               placeholder="Describe el mantenimiento realizado..."
               style={{ ...inputSt, flex: 1 }}
             />
-            <button onClick={handleAddComment} style={{ background: "#1e5bb5", color: "#fff", border: "none", borderRadius: 8, padding: "0 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+            <button onClick={handleAddComment} style={{ background: "#1e5bb5", color: "#fff", border: "none", borderRadius: 8, padding: isMobile ? "10px 14px" : "0 14px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
               <MessageSquarePlus size={14} /> Agregar mantenimiento
             </button>
           </div>
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-        <button onClick={onClose} style={{ background: "#f8fbff", border: "1.5px solid #cce0ff", borderRadius: 8, padding: "10px 20px", color: "#4a6fa5", cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", flexDirection: isMobile ? "column-reverse" : "row" }}>
+        <button onClick={onClose} style={{ width: isMobile ? "100%" : "auto", background: "#f8fbff", border: "1.5px solid #cce0ff", borderRadius: 8, padding: "10px 20px", color: "#4a6fa5", cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>
           Cancelar
         </button>
-        <button onClick={handleSubmit} disabled={isSaving} style={{ background: "linear-gradient(135deg, #1e5bb5 0%, #4a90d9 100%)", color: "#fff", border: "none", borderRadius: 8, padding: "10px 22px", fontSize: 13, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", cursor: isSaving ? "wait" : "pointer", opacity: isSaving ? 0.75 : 1 }}>
+        <button onClick={handleSubmit} disabled={isSaving} style={{ width: isMobile ? "100%" : "auto", background: "linear-gradient(135deg, #1e5bb5 0%, #4a90d9 100%)", color: "#fff", border: "none", borderRadius: 8, padding: "10px 22px", fontSize: 13, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", cursor: isSaving ? "wait" : "pointer", opacity: isSaving ? 0.75 : 1 }}>
           {isSaving ? "Guardando..." : isEdit ? "Guardar Cambios" : "Crear Equipo"}
         </button>
       </div>

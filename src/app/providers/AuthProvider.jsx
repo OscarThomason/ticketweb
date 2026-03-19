@@ -32,6 +32,15 @@ function normalizeLocalUser(user) {
   };
 }
 
+function normalizeBackendUser(user) {
+  if (!user) return null;
+  return {
+    ...user,
+    role: user.effectiveRole || user.role,
+    profileRole: user.role,
+  };
+}
+
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(() => {
     const isPersistent = localStorage.getItem(PERSIST_KEY) === "1";
@@ -39,7 +48,7 @@ export function AuthProvider({ children }) {
 
     if (isBackendEnabled()) {
       const raw = storage.getItem(SESSION_USER_KEY);
-      return raw ? JSON.parse(raw) : null;
+      return raw ? normalizeBackendUser(JSON.parse(raw)) : null;
     }
 
     const savedId = storage.getItem(SESSION_ID_KEY);
@@ -61,12 +70,13 @@ export function AuthProvider({ children }) {
       }
 
       const { token, user } = await authApi.login(credentials);
-      setCurrentUser(user);
-      storage.setItem(SESSION_USER_KEY, JSON.stringify(user));
+      const normalizedUser = normalizeBackendUser(user);
+      setCurrentUser(normalizedUser);
+      storage.setItem(SESSION_USER_KEY, JSON.stringify(normalizedUser));
       localStorage.setItem(PERSIST_KEY, remember ? "1" : "0");
       otherStorage.removeItem(SESSION_USER_KEY);
       setAuthToken(token, remember);
-      return user;
+      return normalizedUser;
     }
 
     const credentials =
@@ -112,4 +122,3 @@ export function AuthProvider({ children }) {
     </AuthContext.Provider>
   );
 }
-

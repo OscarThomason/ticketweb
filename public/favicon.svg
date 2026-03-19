@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <clipPath id="clip">
+      <circle cx="50" cy="50" r="34" />
+    </clipPath>
+  </defs>
+  <circle cx="50" cy="50" r="46" fill="#ffffff" />
+  <circle cx="50" cy="50" r="46" fill="none" stroke="#17c8d3" stroke-width="8" stroke-dasharray="72 217" stroke-dashoffset="0" />
+  <circle cx="50" cy="50" r="46" fill="none" stroke="#f29b10" stroke-width="8" stroke-dasharray="72 217" stroke-dashoffset="-72" />
+  <circle cx="50" cy="50" r="46" fill="none" stroke="#17267d" stroke-width="8" stroke-dasharray="72 217" stroke-dashoffset="-144" />
+  <circle cx="50" cy="50" r="46" fill="none" stroke="#b013a8" stroke-width="8" stroke-dasharray="72 217" stroke-dashoffset="-216" />
+  <circle cx="50" cy="50" r="34" fill="#ffffff" />
+  <g clip-path="url(#clip)">
+    <rect x="16" y="16" width="68" height="68" fill="#17267d" />
+    <rect x="-20" y="8" width="7" height="100" fill="#ffffff" transform="rotate(35 50 50)" />
+    <rect x="-8" y="8" width="7" height="100" fill="#ffffff" transform="rotate(35 50 50)" />
+    <rect x="4" y="8" width="7" height="100" fill="#ffffff" transform="rotate(35 50 50)" />
+    <rect x="16" y="8" width="7" height="100" fill="#ffffff" transform="rotate(35 50 50)" />
+    <rect x="28" y="8" width="7" height="100" fill="#ffffff" transform="rotate(35 50 50)" />
+    <rect x="40" y="8" width="7" height="100" fill="#ffffff" transform="rotate(35 50 50)" />
+    <rect x="52" y="8" width="7" height="100" fill="#ffffff" transform="rotate(35 50 50)" />
+    <rect x="64" y="8" width="7" height="100" fill="#ffffff" transform="rotate(35 50 50)" />
+    <rect x="76" y="8" width="7" height="100" fill="#ffffff" transform="rotate(35 50 50)" />
+  </g>
+</svg>

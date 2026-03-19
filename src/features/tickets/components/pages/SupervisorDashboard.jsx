@@ -4,7 +4,7 @@ import {
   Users, ChevronRight, TrendingUp, BarChart2, Download,
 } from "lucide-react";
 import { useAuth }                         from "../../../../app/providers/auth-context.js";
-import { useTicketsByTeam, useTicketsByUser, useTeamBySupervisor, useUsers }
+import { useTicketsByTeam, useTicketsByUser, useTeamBySupervisor }
   from "../../../../services/tickets/hooks/use-tickets.js";
 import { FiltersBar, TicketTable }         from "../index.js";
 import TicketDetail                        from "../TicketDetail.jsx";
@@ -15,6 +15,7 @@ import { useResponsive }                   from "../../../../shared/hooks/use-re
 import { applyFilters, defaultFilters, groupByMonth, STATUSES, PRIORITIES, CATEGORIES, ACTIVITY_OPTIONS }
   from "../../../../shared/utils/tickets.js";
 import { exportTicketsToCsv } from "../../../../shared/utils/export-history.js";
+import { getTicketDisplayId } from "../../../../shared/utils/tickets.js";
 
 /* ─── Design tokens (azul cielo · blanco · azul fuerte) ─── */
 const T = {
@@ -97,18 +98,24 @@ function KpiCard({ label, value, icon, color, trend, borderTop, onClick }) {
 }
 
 /* ─── Member Badge ──────────────────────────────────────── */
-function MemberBadge({ member, ticketCount, openCount, isSelf }) {
+function MemberBadge({ member, ticketCount, openCount, isSelf, onClick, isActive }) {
   const initials = member.avatar || member.name?.slice(0, 2).toUpperCase();
   return (
-    <div style={{
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
       background:   T.bgCard,
-      border:       `1px solid ${isSelf ? T.accentLight : T.border}`,
+      border:       `1px solid ${isActive ? T.accent : isSelf ? T.accentLight : T.border}`,
       borderRadius: 10,
       padding:      "14px 16px",
       display:      "flex",
       alignItems:   "center",
       gap:          12,
-      boxShadow:    isSelf ? `0 0 0 2px ${T.accentPale}` : "0 1px 4px rgba(30,91,181,0.06)",
+      boxShadow:    isActive ? `0 0 0 2px ${T.accentPale}` : isSelf ? `0 0 0 2px ${T.accentPale}` : "0 1px 4px rgba(30,91,181,0.06)",
+      cursor:       "pointer",
+      width:        "100%",
+      textAlign:    "left",
     }}>
       {/* Avatar */}
       <div style={{
@@ -156,7 +163,7 @@ function MemberBadge({ member, ticketCount, openCount, isSelf }) {
           {ticketCount > 0 ? Math.round((openCount / ticketCount) * 100) : 0}%
         </span>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -202,7 +209,6 @@ export default function SupervisorDashboard() {
   const { currentUser }   = useAuth();
   const { isMobile }      = useResponsive();
   const { data: team }    = useTeamBySupervisor(currentUser.id);
-  const { data: allUsers = [] } = useUsers();
   const { data: teamTickets = [], refetch: refetchTeam } = useTicketsByTeam(team?.id);
   const { data: myTickets = [],   refetch: refetchMine } = useTicketsByUser(currentUser.id);
 
@@ -213,8 +219,21 @@ export default function SupervisorDashboard() {
   const [toast, setToast]           = useState(null);
 
   const teamMembers = useMemo(
-    () => team ? allUsers.filter((u) => team.memberIds.includes(u.id)) : [],
-    [team, allUsers],
+    () => {
+      if (!team) return [];
+
+      const members = Array.isArray(team.members) ? team.members : [];
+      if (members.length) return members;
+
+      return (team.memberIds || []).map((id) => ({
+        id,
+        name: id === currentUser.id ? currentUser.name : "",
+        email: "",
+        role: id === currentUser.id ? currentUser.role : "user",
+        avatar: id === currentUser.id ? currentUser.avatar : null,
+      }));
+    },
+    [team, currentUser],
   );
 
   const refetchAll = () => { refetchTeam(); refetchMine(); };
@@ -223,9 +242,9 @@ export default function SupervisorDashboard() {
   const teamTicketsWithName = useMemo(() => {
     return teamTickets.map(t => ({
       ...t,
-      _creatorName: allUsers.find(u => u.id === t.createdBy)?.name || t.createdBy
+      _creatorName: t.createdByName || teamMembers.find((member) => member.id === t.createdBy)?.name || (t.createdBy === currentUser.id ? currentUser.name : "")
     }));
-  }, [teamTickets, allUsers]);
+  }, [teamTickets, teamMembers, currentUser]);
 
   const myTicketsWithName = useMemo(() => {
     return myTickets.map(t => ({
@@ -254,6 +273,19 @@ export default function SupervisorDashboard() {
   const handleCriticalKpiClick = () => {
     setView("equipo");
     setFilters((prev) => ({ ...prev, status: "Todos", priority: "Crítica", activity: "Todas" }));
+    setTimeout(() => {
+      document.getElementById("ticket-list-area")?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
+  const handleMemberClick = (memberId) => {
+    setView("equipo");
+    setFilters((prev) => ({
+      ...prev,
+      userId: prev.userId === memberId ? "" : memberId,
+      status: "Todos",
+      priority: "Todas",
+      activity: "Todas",
+    }));
     setTimeout(() => {
       document.getElementById("ticket-list-area")?.scrollIntoView({ behavior: "smooth" });
     }, 100);
@@ -364,6 +396,8 @@ export default function SupervisorDashboard() {
                 ticketCount={count}
                 openCount={open}
                 isSelf={member.id === currentUser.id}
+                isActive={view !== "mios" && filters.userId === member.id}
+                onClick={() => handleMemberClick(member.id)}
               />
             );
           })}
@@ -437,7 +471,7 @@ export default function SupervisorDashboard() {
 
       {selectedId && (
         <Modal title="Detalle del Ticket" onClose={() => { setSelectedId(null); refetchAll(); }} width={680}>
-          <TicketDetail ticketId={selectedId} canChangeStatus={false} canComment={true} onClose={() => setSelectedId(null)} onUpdate={refetchAll} />
+          <TicketDetail ticketId={selectedId} canChangeStatus={false} canComment={true} onClose={() => setSelectedId(null)} onUpdate={refetchAll} knownUsers={teamMembers} />
         </Modal>
       )}
 
@@ -525,6 +559,7 @@ function Pill({ label, styleMap }) {
 
 /* ─── Styled Ticket Table (light theme) ─────────────────── */
 function StyledTicketTable({ tickets, onSelect, showUser = false }) {
+  const { isMobile } = useResponsive();
   const isBlockingActivity = (value) => String(value || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -555,6 +590,63 @@ function StyledTicketTable({ tickets, onSelect, showUser = false }) {
     whiteSpace:    "nowrap",
   };
 
+  if (isMobile) {
+    return (
+      <div style={{ display: "grid", gap: 12, padding: 12 }}>
+        {tickets.map((ticket) => {
+          const blocking = isBlockingActivity(ticket.activity);
+          return (
+            <button
+              key={ticket.id}
+              type="button"
+              onClick={() => onSelect(ticket.id)}
+              style={{
+                background: T.white,
+                border: `1px solid ${T.border}`,
+                borderRadius: 12,
+                padding: 14,
+                textAlign: "left",
+                cursor: "pointer",
+                boxShadow: "0 2px 10px rgba(30,91,181,0.06)",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start", marginBottom: 10 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.accentLight, fontFamily: "monospace", marginBottom: 6 }}>
+                    {getTicketDisplayId(ticket)}
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: T.textPrimary }}>{ticket.title}</div>
+                  {showUser && ticket._creatorName && (
+                    <div style={{ fontSize: 12, color: T.textSecondary, marginTop: 4 }}>{ticket._creatorName}</div>
+                  )}
+                </div>
+                <ChevronRight size={16} color={T.accentLight} style={{ flexShrink: 0 }} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, textTransform: "uppercase" }}>Categoria</div>
+                  <div style={{ fontSize: 12, color: T.textSecondary }}>{ticket.category}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, textTransform: "uppercase" }}>Fecha</div>
+                  <div style={{ fontSize: 12, color: T.textSecondary }}>{new Date(ticket.createdAt).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                <Pill label={ticket.priority} styleMap={PRIORITY_STYLES} />
+                <Pill label={ticket.status} styleMap={STATUS_STYLES} />
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: T.textSecondary }}>
+                  <span style={{ width: 10, height: 10, borderRadius: "50%", display: "inline-block", background: blocking ? T.danger : T.success, boxShadow: `0 0 0 2px ${blocking ? T.dangerPale : T.successPale}` }} />
+                  {blocking ? "Impide trabajar" : "No impide trabajar"}
+                </span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <div style={{ overflowX: "auto" }}>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
@@ -582,7 +674,7 @@ function StyledTicketTable({ tickets, onSelect, showUser = false }) {
             >
               <td style={{ padding: "13px 16px" }}>
                 <span style={{ fontFamily: "monospace", fontSize: 11, fontWeight: 700, color: T.accentLight, background: T.accentPale, padding: "2px 7px", borderRadius: 4 }}>
-                  {t.id}
+                  {getTicketDisplayId(t)}
                 </span>
               </td>
               <td style={{ padding: "13px 16px", maxWidth: 240 }}>
@@ -593,7 +685,7 @@ function StyledTicketTable({ tickets, onSelect, showUser = false }) {
               {showUser && (
                 <td style={{ padding: "13px 16px" }}>
                   <span style={{ fontSize: 12, color: T.textSecondary, fontWeight: 500 }}>
-                    {t._creatorName || t.createdBy}
+                    {t._creatorName}
                   </span>
                 </td>
               )}

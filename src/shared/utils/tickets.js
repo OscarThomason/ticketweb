@@ -14,3 +14,15 @@ export {
   ROLE_LABELS,
   ROLE_COLORS,
 } from "../../domain/ticket/ticket.constants.js";
+
+export function getTicketDisplayId(ticket) {
+  if (!ticket) return "";
+  if (ticket.code) return String(ticket.code).toUpperCase();
+
+  const compact = String(ticket.id || "")
+    .replace(/[^a-z0-9]/gi, "")
+    .toUpperCase();
+
+  if (!compact) return "TK-00000";
+  return `TK-${compact.slice(-5).padStart(5, "0")}`;
+}

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Download, History } from "lucide-react";
 import * as XLSX from "xlsx";
 import { auditApi } from "../../../../services/audit/audit.api.js";
+import { useResponsive } from "../../../../shared/hooks/use-responsive.js";
 
 const T = {
   bgPage: "#f0f6ff",
@@ -15,6 +16,7 @@ const T = {
 };
 
 export default function AuditLogPanel() {
+  const { isMobile } = useResponsive();
   const [logs, setLogs] = useState([]);
 
   useEffect(() => {
@@ -56,7 +58,7 @@ export default function AuditLogPanel() {
         </div>
         <button
           onClick={handleExportAuditExcel}
-          style={{ background: "#ffffff", border: `1px solid ${T.border}`, borderRadius: 8, padding: "9px 14px", fontSize: 13, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: T.accent }}
+          style={{ width: isMobile ? "100%" : "auto", justifyContent: "center", background: "#ffffff", border: `1px solid ${T.border}`, borderRadius: 8, padding: "9px 14px", fontSize: 13, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: T.accent }}
         >
           <Download size={14} /> Exportar Excel
         </button>
@@ -97,4 +99,3 @@ export default function AuditLogPanel() {
     </div>
   );
 }
-
