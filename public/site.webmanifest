@@ -1,0 +1,17 @@
+{
+  "name": "Tickets RB",
+  "short_name": "Tickets RB",
+  "description": "Sistema de tickets y soporte interno",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f0f6ff",
+  "theme_color": "#173f90",
+  "icons": [
+    {
+      "src": "/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
