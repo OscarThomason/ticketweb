@@ -1,0 +1,149 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  SUPERVISOR
+  SUPPORT
+}
+
+model User {
+  id             String           @id @default(cuid())
+  name           String
+  email          String           @unique
+  passwordHash   String
+  role           Role
+  avatar         String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  assignment     TeamAssignment?
+  createdTickets Ticket[]         @relation("TicketCreator")
+  ticketComments TicketComment[]
+  statusChanges  TicketStatus[]
+  inventory      InventoryItem[]  @relation("InventoryAssignedUser")
+  auditLogs      AuditLog[]       @relation("AuditActor")
+}
+
+model Team {
+  id          String           @id @default(cuid())
+  name        String           @unique
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  assignments TeamAssignment[]
+  tickets     Ticket[]
+  inventory   InventoryItem[]  @relation("InventoryOwningTeam")
+}
+
+model TeamAssignment {
+  id           String   @id @default(cuid())
+  teamId       String
+  userId       String   @unique
+  isSupervisor Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  team         Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+}
+
+model Ticket {
+  id            String         @id @default(cuid())
+  title         String
+  description   String
+  category      String
+  priority      String
+  activity      String
+  status        String         @default("Abierto")
+  createdById   String
+  teamId        String?
+  attachments   Json?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  createdBy     User           @relation("TicketCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  team          Team?          @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  comments      TicketComment[]
+  statusHistory TicketStatus[]
+
+  @@index([createdById])
+  @@index([teamId])
+}
+
+model TicketComment {
+  id         String   @id @default(cuid())
+  ticketId   String
+  authorId   String
+  authorRole String
+  text       String
+  createdAt  DateTime @default(now())
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author     User     @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([ticketId])
+}
+
+model TicketStatus {
+  id          String   @id @default(cuid())
+  ticketId    String
+  status      String
+  changedById String
+  note        String?
+  changedAt   DateTime @default(now())
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  changedBy   User     @relation(fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@index([ticketId])
+}
+
+model InventoryItem {
+  id               String   @id @default(cuid())
+  assetName        String
+  assetCategory    String?
+  brand            String?
+  model            String?
+  serialNumber     String?  @unique
+  operatingSystem  String?
+  processor        String?
+  ram              String?
+  storage          String?
+  status           String?
+  location         String?
+  notes            String?
+  assignedUserId   String?
+  owningTeamId     String?
+  revisions        Int      @default(0)
+  commentsJson     Json?
+  responsivaName   String?
+  responsivaPath   String?
+  responsivaMime   String?
+  responsivaSize   Int?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  assignedUser     User?    @relation("InventoryAssignedUser", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  owningTeam       Team?    @relation("InventoryOwningTeam", fields: [owningTeamId], references: [id], onDelete: SetNull)
+
+  @@index([assignedUserId])
+  @@index([owningTeamId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actorName  String
+  action     String
+  entityType String
+  entityId   String?
+  summary    String
+  details    String?
+  createdAt  DateTime @default(now())
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+}
