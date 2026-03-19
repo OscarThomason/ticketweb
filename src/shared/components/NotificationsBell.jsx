@@ -60,12 +60,13 @@ function playNotificationSound() {
 }
 
 export default function NotificationsBell({ compact = false }) {
-  const { data } = useNotifications();
+  const { data, error } = useNotifications();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
   const items = useMemo(() => data?.items || [], [data]);
   const unreadCount = Number(data?.unreadCount || 0);
   const panelWidth = compact ? "min(84vw, 320px)" : "min(92vw, 360px)";
+  const isMobilePanel = compact;
   const seenIdsRef = useRef(new Set());
   const [permission, setPermission] = useState(() =>
     canUseBrowserNotifications() ? window.Notification.permission : "unsupported",
@@ -165,9 +166,12 @@ export default function NotificationsBell({ compact = false }) {
         style={{
           position: "absolute",
           top: compact ? 46 : 48,
-          right: 0,
+          right: isMobilePanel ? "50%" : 0,
+          left: isMobilePanel ? "auto" : undefined,
+          transform: isMobilePanel ? "translateX(50%)" : "none",
           width: panelWidth,
-          maxHeight: "min(70vh, 520px)",
+          maxWidth: isMobilePanel ? "calc(100vw - 24px)" : panelWidth,
+          maxHeight: isMobilePanel ? "min(62vh, 460px)" : "min(70vh, 520px)",
           overflowY: "auto",
           background: "#ffffff",
           border: "1px solid #dbeafe",
@@ -207,6 +211,23 @@ export default function NotificationsBell({ compact = false }) {
         </div>
 
         <div style={{ padding: 8 }}>
+          {error && (
+            <div
+              style={{
+                border: "1px solid #fecaca",
+                background: "#fef2f2",
+                color: "#b91c1c",
+                borderRadius: 12,
+                padding: "12px 12px",
+                marginBottom: 8,
+                fontSize: 12,
+                lineHeight: 1.5,
+              }}
+            >
+              No se pudieron cargar las notificaciones.
+            </div>
+          )}
+
           {permission !== "granted" && (
             <div
               style={{

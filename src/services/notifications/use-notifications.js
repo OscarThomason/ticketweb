@@ -6,7 +6,8 @@ export function useNotifications(options = {}) {
   return useQuery({
     queryKey: notificationKeys.all(),
     queryFn: notificationsApi.getAll,
-    refetchInterval: 15000,
+    refetchInterval: 5000,
+    refetchOnWindowFocus: true,
     ...options,
   });
 }
