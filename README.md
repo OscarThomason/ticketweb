@@ -28,3 +28,11 @@ Revisa:
 3. Inicia frontend.
 
 Si `VITE_API_URL` no existe, el frontend sigue en modo local (localStorage).
+
+### Produccion (VPS)
+
+- Usa `VITE_API_URL` apuntando al host del backend (sin slash final), por ejemplo:
+  `VITE_API_URL=https://api.tudominio.com`
+- Si frontend y backend comparten dominio, puedes usar:
+  `VITE_API_URL=https://tudominio.com`
+- El frontend consume endpoints bajo `/api/*`.

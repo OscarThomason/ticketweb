@@ -12,7 +12,27 @@ export async function createApp() {
 
   await fs.mkdir(path.resolve(config.uploadDir, "responsivas"), { recursive: true });
 
-  app.use(cors());
+  const hasRestrictedOrigins = config.corsAllowedOrigins.length > 0;
+  const corsOptions = hasRestrictedOrigins
+    ? {
+        origin(origin, callback) {
+          // Allow requests with no Origin header (curl, server-side, health checks).
+          if (!origin) {
+            callback(null, true);
+            return;
+          }
+
+          if (config.corsAllowedOrigins.includes(origin)) {
+            callback(null, true);
+            return;
+          }
+
+          callback(new Error(`CORS blocked origin: ${origin}`));
+        },
+      }
+    : undefined;
+
+  app.use(cors(corsOptions));
   app.use(express.json({ limit: "6mb" }));
   app.use(morgan(config.env === "production" ? "combined" : "dev"));
 
@@ -24,4 +44,3 @@ export async function createApp() {
 
   return app;
 }
-

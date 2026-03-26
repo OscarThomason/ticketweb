@@ -74,7 +74,16 @@ docker exec -it ticketflow-api npm run prisma:seed
 ## 6) Produccion recomendada
 
 - Usa un `JWT_SECRET` largo y privado.
-- Restringe CORS al dominio real.
+- Restringe CORS al dominio real con `CORS_ALLOWED_ORIGINS`.
 - Coloca Nginx delante del backend con HTTPS (Let's Encrypt).
 - Haz backups automaticos de PostgreSQL.
 - Agrega logs centralizados y monitoreo (Uptime + errores).
+
+## 7) Variables de entorno importantes
+
+- `DATABASE_URL`: conexion a PostgreSQL (obligatoria)
+- `JWT_SECRET`: secreto JWT en produccion
+- `UPLOAD_DIR`: ruta para archivos/responsivas
+- `CORS_ALLOWED_ORIGINS`: lista separada por comas de origenes permitidos.
+  Ejemplo:
+  `CORS_ALLOWED_ORIGINS=https://app.tudominio.com,https://admin.tudominio.com`
